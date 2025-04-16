@@ -1,19 +1,13 @@
 <?php
-
+// app/Repositories/Interfaces/SiegeRepositoryInterface.php
 namespace App\Repositories\Interfaces;
 
-interface SiegeRepositoryInterface
-{
-    public function all();
-
+interface SiegeRepositoryInterface {
+    public function getAll();
+    public function getById(int $id);
     public function create(array $data);
-
-    public function find($id);
-
-    public function update($id, array $data);
-
-    public function delete($id);
-    public function getSiegesDisponibles($seanceId);
-    public function reserverSiege($id);
-    public function estDisponible($id);
+    public function update(int $id, array $data);
+    public function delete(int $id);
+    public function getBySalleId(int $salleId);
+    public function createCoupleSeats(int $salleId, string $rangee, int $numeroDebut);
 }

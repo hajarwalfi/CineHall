@@ -1,6 +1,5 @@
 <?php
-
-
+// app/Http/Controllers/SiegeController.php
 namespace App\Http\Controllers;
 
 use App\Services\SiegeService;
@@ -17,61 +16,69 @@ class SiegeController extends Controller
 
     public function index()
     {
-        $sieges = $this->siegeService->allSieges();
+        $sieges = $this->siegeService->getAllSieges();
         return response()->json($sieges);
+    }
+
+    public function show($id)
+    {
+        $siege = $this->siegeService->getSiegeById($id);
+        return response()->json($siege);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validated = $request->validate([
             'salle_id' => 'required|exists:salles,id',
-            'numero' => 'required|string',
-            'statut' => 'required|string',
-            'seance_id' => 'required|exists:seances,id'
+            'rangee' => 'required|string|max:5',
+            'numero' => 'required|integer|min:1',
+            'type' => 'required|in:Standard,VIP,Couple',
+            'est_couple_avec' => 'nullable|exists:sieges,id'
         ]);
 
-        $siege = $this->siegeService->createSiege($data);
+        $siege = $this->siegeService->createSiege($validated);
         return response()->json($siege, 201);
     }
 
     public function update(Request $request, $id)
     {
-        $data = $request->validate([
-            'salle_id' => 'exists:salles,id',
-            'numero' => 'string',
-            'statut' => 'required|string',
+        $validated = $request->validate([
+            'rangee' => 'string|max:5',
+            'numero' => 'integer|min:1',
+            'type' => 'in:Standard,VIP,Couple',
+            'est_couple_avec' => 'nullable|exists:sieges,id'
         ]);
 
-        $siege = $this->siegeService->updateSiege($id, $data);
+        $siege = $this->siegeService->updateSiege($id, $validated);
         return response()->json($siege);
     }
 
     public function destroy($id)
     {
         $this->siegeService->deleteSiege($id);
-        return response()->json(['message' => 'Siege supprimé avec succès']);
+        return response()->json(['message' => 'Siège supprimé avec succès']);
     }
-    public function getSiegesDisponibles($seanceId)
+
+    public function getBySalle($salleId)
     {
-        $sieges = $this->siegeService->getSiegesDisponibles($seanceId);
+        $sieges = $this->siegeService->getSiegesBySalle($salleId);
         return response()->json($sieges);
     }
-    public function reserver(Request $request)
+
+    public function createCoupleSeats(Request $request)
     {
-        $data = $request->validate([
-            'siege_id' => 'required|exists:sieges,id',
-            'seance_id' => 'required|exists:seances,id'
+        $validated = $request->validate([
+            'salle_id' => 'required|exists:salles,id',
+            'rangee' => 'required|string|max:5',
+            'numero_debut' => 'required|integer|min:1'
         ]);
 
-        try {
-            $reservation = $this->siegeService->reserverSiege($data['siege_id'], $data['seance_id']);
-            return response()->json(['message' => 'Réservation réussie', 'data' => $reservation], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
+        $sieges = $this->siegeService->createCoupleSeats(
+            $validated['salle_id'],
+            $validated['rangee'],
+            $validated['numero_debut']
+        );
+
+        return response()->json($sieges, 201);
     }
-
-
-
-
 }

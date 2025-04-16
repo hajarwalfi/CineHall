@@ -33,4 +33,9 @@ class SalleRepository implements SalleRepositoryInterface
         $salle = Salle::findOrFail($id);
         return $salle->delete();
     }
+
+    public function getSallesWithVIP()
+    {
+        return Salle::where('supporte_vip', true)->get();
+    }
 }

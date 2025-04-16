@@ -18,24 +18,9 @@ class SeanceService
         return $this->seanceRepository->getAll();
     }
 
-    public function createSeance($data)
+    public function getSeancesByFilm($filmId)
     {
-        return $this->seanceRepository->create($data);
-    }
-
-    public function updateSeance($id, $data)
-    {
-        return $this->seanceRepository->update($id, $data);
-    }
-
-    public function deleteSeance($id)
-    {
-        return $this->seanceRepository->delete($id);
-    }
-
-    public function getSeancesByType($type)
-    {
-        return $this->seanceRepository->getByType($type);
+        return $this->seanceRepository->getByFilmId($filmId);
     }
 
     public function getSeanceById($id)

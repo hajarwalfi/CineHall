@@ -1,41 +1,48 @@
 <?php
 
-
 namespace App\Repositories;
 
 use App\Models\User;
+use App\Repositories\Interfaces\UserRepositoryInterface;
 
-class UserRepository
+class UserRepository implements UserRepositoryInterface
 {
-    public function create(array $data)
+    protected $model;
+
+    public function __construct(User $model)
     {
-        return User::create($data);
+        $this->model = $model;
     }
 
-    public function findByEmail(string $email)
+    // Fetch user by ID
+    public function findById($id)
     {
-        return User::where('email', $email)->first();
+        return $this->model->find($id);
     }
 
-    public function update(User $user, array $data)
+    // Update user
+    public function update($id, array $data)
     {
-        $user->update($data);
+        $user = $this->model->find($id);
+        if ($user) {
+            $user->update($data);
+        }
         return $user;
     }
 
+    // Delete user
     public function delete($id)
     {
-        $user = User::find($id);
-        return $user->delete();
+        $user = $this->model->find($id);
+        if ($user) {
+            $user->delete();
+        }
+        return $user;
     }
 
-    public function getAll()
+    // Create user
+    public function create(array $data)
     {
-        return User::all();
-    }
-
-    public function findById(int $id)
-    {
-        return User::find($id);
+        return $this->model->create($data);
     }
 }

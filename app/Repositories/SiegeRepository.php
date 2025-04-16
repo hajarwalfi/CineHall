@@ -1,15 +1,21 @@
 <?php
-
+// app/Repositories/SiegeRepository.php
 namespace App\Repositories;
 
 use App\Models\Siege;
 use App\Repositories\Interfaces\SiegeRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 
 class SiegeRepository implements SiegeRepositoryInterface
 {
-    public function all()
+    public function getAll()
     {
         return Siege::all();
+    }
+
+    public function getById(int $id)
+    {
+        return Siege::findOrFail($id);
     }
 
     public function create(array $data)
@@ -17,50 +23,51 @@ class SiegeRepository implements SiegeRepositoryInterface
         return Siege::create($data);
     }
 
-    public function find($id)
+    public function update(int $id, array $data)
     {
-        return Siege::findOrFail($id);
-    }
-
-    public function update($id, array $data)
-    {
-        $siege = $this->find($id);
+        $siege = Siege::findOrFail($id);
         $siege->update($data);
         return $siege;
     }
 
-
-    public function delete($id)
+    public function delete(int $id)
     {
-        $siege = $this->find($id);
-        $siege->delete();
-        return true;
-    }
-    public function getSiegesDisponibles($seanceId)
-    {
-        return Siege::where('statut', 'disponible')
-            ->whereHas('seance', function ($query) use ($seanceId) {
-                $query->where('id', $seanceId);
-            })
-            ->get();
-    }
-    public function reserverSiege($id)
-    {
-        $siege = $this->find($id);
-
-        if ($siege->statut === 'réservé') {
-            throw new \Exception("Ce siège est déjà réservé.");
-        }
-
-        $siege->update(['statut' => 'réservé']);
-        return $siege;
+        $siege = Siege::findOrFail($id);
+        return $siege->delete();
     }
 
-    public function estDisponible($id)
+    public function getBySalleId(int $salleId)
     {
-        $siege = $this->find($id);
-        return $siege->statut === 'disponible';
+        return Siege::where('salle_id', $salleId)->orderBy('rangee')->orderBy('numero')->get();
     }
 
+    public function createCoupleSeats(int $salleId, string $rangee, int $numeroDebut)
+    {
+        // Utiliser une transaction pour s'assurer que les deux sièges sont créés ensemble
+        return DB::transaction(function () use ($salleId, $rangee, $numeroDebut) {
+            // Créer le premier siège
+            $siege1 = Siege::create([
+                'salle_id' => $salleId,
+                'rangee' => $rangee,
+                'numero' => $numeroDebut,
+                'type' => 'Couple',
+                'est_couple_avec' => null // Sera mis à jour après création du deuxième siège
+            ]);
 
+            // Créer le deuxième siège
+            $siege2 = Siege::create([
+                'salle_id' => $salleId,
+                'rangee' => $rangee,
+                'numero' => $numeroDebut + 1,
+                'type' => 'Couple',
+                'est_couple_avec' => $siege1->id
+            ]);
+
+            // Mettre à jour le premier siège pour référencer le deuxième
+            $siege1->est_couple_avec = $siege2->id;
+            $siege1->save();
+
+            return [$siege1, $siege2];
+        });
+    }
 }

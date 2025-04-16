@@ -3,25 +3,48 @@
 namespace App\Http\Controllers;
 
 use App\Services\FilmService;
+use App\Services\SeanceService;
 use Illuminate\Http\Request;
 
 class FilmController extends Controller
 {
     protected $filmService;
+    protected $seanceService; // Ajout du service manquant
 
-    public function __construct(FilmService $filmService)
+    public function __construct(FilmService $filmService, SeanceService $seanceService)
     {
         $this->filmService = $filmService;
+        $this->seanceService = $seanceService; // Injection du service
+    }
+
+    public function index()
+    {
+        // Utiliser le service au lieu du modèle directement
+        $films = $this->filmService->getAllFilms();
+        return response()->json($films);
     }
 
     public function show($filmId)
     {
-        $film = $this->filmService->getFilmById($filmId);
-        $seances = $this->seanceService->getSeancesByFilm($filmId);
-        return response()->json([
-            'film' => $film,
-            'seances' => $seances,
-        ]);
+        try {
+            $film = $this->filmService->getFilmById($filmId);
+
+            // Vérifier que $film n'est pas null
+            if (!$film) {
+                return response()->json(['error' => 'Film non trouvé'], 404);
+            }
+
+            $seances = $this->seanceService->getSeancesByFilm($filmId);
+
+            return response()->json([
+                'film' => $film,
+                'seances' => $seances,
+            ]);
+        } catch (\Exception $e) {
+            // Log l'erreur et renvoyer une réponse JSON d'erreur
+            \Log::error('Erreur dans FilmController@show: ' . $e->getMessage());
+            return response()->json(['error' => 'Une erreur est survenue: ' . $e->getMessage()], 500);
+        }
     }
 
     public function store(Request $request)

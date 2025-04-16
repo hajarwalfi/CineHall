@@ -1,62 +1,120 @@
 <?php
-
+// app/Services/ReservationService.php
 namespace App\Services;
 
-use App\Models\Seance;
 use App\Repositories\Interfaces\ReservationRepositoryInterface;
-use App\Services\SiegeService;
-use Illuminate\Support\Facades\DB;
-use Exception;
+use App\Repositories\Interfaces\SiegeRepositoryInterface;
 
 class ReservationService
 {
     protected $reservationRepository;
-    protected $siegeService;
+    protected $siegeRepository;
 
-    public function __construct(ReservationRepositoryInterface $reservationRepository, SiegeService $siegeService)
-    {
+    public function __construct(
+        ReservationRepositoryInterface $reservationRepository,
+        SiegeRepositoryInterface $siegeRepository
+    ) {
         $this->reservationRepository = $reservationRepository;
-        $this->siegeService = $siegeService;
+        $this->siegeRepository = $siegeRepository;
     }
 
-    public function reserver(int $seanceId, array $siegeIds)
+    public function getAllReservations()
     {
-        // Vérifier si la séance existe
-        $seance = Seance::findOrFail($seanceId);
+        return $this->reservationRepository->getAll();
+    }
 
-        // Vérifier la disponibilité des sièges et réserver les sièges via SiegeService
-        $siegesReserves = [];
-        foreach ($siegeIds as $siegeId) {
-            try {
-                // Appel à SiegeService pour réserver les sièges
-                $siegesReserves[] = $this->siegeService->reserverSiege($siegeId, $seanceId);
-            } catch (Exception $e) {
-                throw new Exception("Erreur lors de la réservation du siège $siegeId: " . $e->getMessage());
+    public function getReservationById($id)
+    {
+        return $this->reservationRepository->getById($id);
+    }
+
+    public function getReservationByCode($code)
+    {
+        return $this->reservationRepository->getByCode($code);
+    }
+
+    public function createReservation($data)
+    {
+        return $this->reservationRepository->create($data);
+    }
+
+    public function updateReservation($id, $data)
+    {
+        return $this->reservationRepository->update($id, $data);
+    }
+
+    public function deleteReservation($id)
+    {
+        return $this->reservationRepository->delete($id);
+    }
+
+    public function getReservationsBySeance($seanceId)
+    {
+        return $this->reservationRepository->getBySeanceId($seanceId);
+    }
+
+    public function getSiegesDisponiblesBySeance($seanceId, $salleId)
+    {
+        // Récupérer tous les sièges de la salle
+        $sieges = $this->siegeRepository->getBySalleId($salleId);
+
+        // Récupérer les IDs des sièges déjà réservés
+        $siegesReserves = $this->reservationRepository->getSiegesReservesBySeance($seanceId);
+
+        // Filtrer les sièges disponibles
+        $siegesDisponibles = $sieges->filter(function ($siege) use ($siegesReserves) {
+            return !in_array($siege->id, $siegesReserves);
+        });
+
+        return $siegesDisponibles;
+    }
+
+    public function reserverSiege($seanceId, $siegeId, $userId = null)
+    {
+        return $this->reservationRepository->reserverSiege($seanceId, $siegeId, $userId);
+    }
+
+    public function annulerReservation($reservationId)
+    {
+        return $this->reservationRepository->annulerReservation($reservationId);
+    }
+
+    public function payerReservation($reservationId)
+    {
+        return $this->reservationRepository->payerReservation($reservationId);
+    }
+
+    // Obtenir la carte des sièges pour une séance
+    public function getCarteSieges($seanceId, $salleId)
+    {
+        // Récupérer tous les sièges de la salle
+        $sieges = $this->siegeRepository->getBySalleId($salleId);
+
+        // Récupérer les IDs des sièges déjà réservés
+        $siegesReserves = $this->reservationRepository->getSiegesReservesBySeance($seanceId);
+
+        // Organiser les sièges par rangée
+        $siegesParRangee = [];
+        foreach ($sieges as $siege) {
+            if (!isset($siegesParRangee[$siege->rangee])) {
+                $siegesParRangee[$siege->rangee] = [];
             }
+
+            // Ajouter des informations sur la disponibilité
+            $siege->disponible = !in_array($siege->id, $siegesReserves);
+
+            $siegesParRangee[$siege->rangee][$siege->numero] = $siege;
         }
 
-        // Démarrer une transaction pour créer la réservation
-        DB::beginTransaction();
-        try {
-            // Créer la réservation
-            $reservation = $this->reservationRepository->creerReservation([
-                'seance_id' => $seanceId,
-                'user_id' => auth()->id(),
-                'statut' => 'pending',
-                'expiration_at' => now()->addMinutes(15),
-            ]);
+        // Trier les rangées
+        ksort($siegesParRangee);
 
-            // Commit de la transaction
-            DB::commit();
+        return $siegesParRangee;
+    }
 
-            // Retourner les informations de la réservation
-            return [
-                'reservation' => $reservation,
-                'sieges_reserves' => $siegesReserves,
-            ];
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception("Erreur lors de la création de la réservation : " . $e->getMessage());
-        }
+    // Annuler les réservations expirées
+    public function annulerReservationsExpirees()
+    {
+        return $this->reservationRepository->annulerReservationsExpirees();
     }
 }

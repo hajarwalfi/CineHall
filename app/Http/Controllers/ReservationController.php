@@ -1,62 +1,139 @@
 <?php
+// app/Http/Controllers/ReservationController.php
 namespace App\Http\Controllers;
 
-use App\Models\Reservation;
 use App\Services\ReservationService;
+use App\Services\SeanceService;
 use Illuminate\Http\Request;
 
 class ReservationController extends Controller
 {
-    public function __construct(ReservationService $reservationService)
+    protected $reservationService;
+    protected $seanceService;
+
+    public function __construct(ReservationService $reservationService, SeanceService $seanceService)
     {
         $this->reservationService = $reservationService;
+        $this->seanceService = $seanceService;
     }
-    // Méthode pour vérifier et expirer les réservations
-    public function checkAndExpireReservations()
-    {
-        // Vérifier toutes les réservations qui sont "pending" et dont l'expiration est passée
-        $reservations = Reservation::where('statut', 'pending')
-            ->where('expiration_at', '<', now())
-            ->get();
 
-        foreach ($reservations as $reservation) {
-            // Expirer les réservations non confirmées après 15 minutes
-            $reservation->update(['statut' => 'expired']);
+    public function index()
+    {
+        $reservations = $this->reservationService->getAllReservations();
+        return response()->json($reservations);
+    }
+
+    public function show($id)
+    {
+        $reservation = $this->reservationService->getReservationById($id);
+        return response()->json($reservation);
+    }
+
+    public function getByCode($code)
+    {
+        $reservation = $this->reservationService->getReservationByCode($code);
+
+        if (!$reservation) {
+            return response()->json(['error' => 'Réservation non trouvée'], 404);
         }
 
-        return response()->json([
-            'message' => 'Les réservations expirées ont été mises à jour.',
-        ]);
+        return response()->json($reservation);
     }
 
-    // Handle the reservation request
-    public function reserver(Request $request)
+    public function store(Request $request)
     {
-        // Validate the incoming request
         $validated = $request->validate([
-            'seance_id' => 'required|exists:seances,id',  // The session must exist
-            'siegeIds' => 'required|array',  // Array of seat IDs
-            'siegeIds.*' => 'exists:sieges,id',  // Each seat must exist
+            'seance_id' => 'required|exists:seances,id',
+            'siege_id' => 'required|exists:sieges,id',
+            'user_id' => 'nullable|exists:users,id'
         ]);
-
-        $seanceId = $validated['seance_id'];
-        $siegeIds = $validated['siegeIds'];
 
         try {
-            // Call the ReservationService to handle the reservation logic
-            $reservation = $this->reservationService->reserver($seanceId, $siegeIds);
+            $reservation = $this->reservationService->reserverSiege(
+                $validated['seance_id'],
+                $validated['siege_id'],
+                $validated['user_id'] ?? null
+            );
 
-            // Return the reservation details as a response
-            return response()->json([
-                'message' => 'Reservation successful',
-                'data' => $reservation
-            ]);
+            return response()->json($reservation, 201);
         } catch (\Exception $e) {
-            // Handle any errors that may occur during the reservation process
-            return response()->json([
-                'message' => 'Reservation failed',
-                'error' => $e->getMessage()
-            ], 400);
+            return response()->json(['error' => $e->getMessage()], 400);
         }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'statut' => 'in:Réservé,Payé,Annulé'
+        ]);
+
+        try {
+            $reservation = $this->reservationService->updateReservation($id, $validated);
+            return response()->json($reservation);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $this->reservationService->annulerReservation($id);
+            return response()->json(['message' => 'Réservation annulée avec succès']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function payer($id)
+    {
+        try {
+            $reservation = $this->reservationService->payerReservation($id);
+            return response()->json($reservation);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function getBySeance($seanceId)
+    {
+        $reservations = $this->reservationService->getReservationsBySeance($seanceId);
+        return response()->json($reservations);
+    }
+
+    public function getSiegesDisponibles($seanceId)
+    {
+        // Récupérer la séance pour obtenir l'ID de la salle
+        $seance = $this->seanceService->getSeanceById($seanceId);
+
+        if (!$seance) {
+            return response()->json(['error' => 'Séance non trouvée'], 404);
+        }
+
+        $salleId = $seance->salle_id;
+
+        $siegesDisponibles = $this->reservationService->getSiegesDisponiblesBySeance($seanceId, $salleId);
+        return response()->json($siegesDisponibles);
+    }
+
+    public function getCarteSieges($seanceId)
+    {
+        // Récupérer la séance pour obtenir l'ID de la salle
+        $seance = $this->seanceService->getSeanceById($seanceId);
+
+        if (!$seance) {
+            return response()->json(['error' => 'Séance non trouvée'], 404);
+        }
+
+        $salleId = $seance->salle_id;
+
+        $carteSieges = $this->reservationService->getCarteSieges($seanceId, $salleId);
+        return response()->json($carteSieges);
+    }
+
+    public function annulerExpirees()
+    {
+        $count = $this->reservationService->annulerReservationsExpirees();
+        return response()->json(['message' => $count . ' réservation(s) expirée(s) annulée(s)']);
     }
 }

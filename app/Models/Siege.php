@@ -1,5 +1,5 @@
 <?php
-
+// app/Models/Siege.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,19 +9,23 @@ class Siege extends Model
 {
     use HasFactory;
 
-    protected $table = 'sieges';
-
-    protected $fillable = ['salle_id', 'numero', 'statut', 'seance_id'];
+    protected $fillable = ['salle_id', 'rangee', 'numero', 'type', 'est_couple_avec'];
 
     public function salle()
     {
         return $this->belongsTo(Salle::class);
     }
 
-    public function seance()
+    public function reservations()
     {
-        return $this->belongsTo(Seance::class);
+        return $this->hasMany(Reservation::class);
     }
 
-
+    public function siegeCouple()
+    {
+        if ($this->est_couple_avec) {
+            return Siege::find($this->est_couple_avec);
+        }
+        return null;
+    }
 }

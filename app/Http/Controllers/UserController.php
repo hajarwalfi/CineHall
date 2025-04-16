@@ -1,85 +1,57 @@
 <?php
-
 namespace App\Http\Controllers;
 
-use App\Repositories\UserRepository;
-use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    protected $userRepository;
+    protected $userService;
 
-    public function __construct(UserRepository $userRepository)
+    public function __construct(UserService $userService)
     {
-        $this->userRepository = $userRepository;
+        $this->userService = $userService;
     }
 
-    public function register(Request $request)
+    // Show user details
+    public function show(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'role' => 'nullable|in:user,admin',
-        ]);
-
-        $user = $this->userRepository->create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
-            'role' => $request->role ?? 'user',
-        ]);
-
-        return response()->json(['message' => 'User created successfully!', 'user' => $user], 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        if ($id != auth()->user()->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $user = $this->userRepository->findById($id);
+         $user = $this->userService->getUserDetails(auth()->id());
 
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        $request->validate([
+        return response()->json(['user' => $user], 200);
+    }
+
+    // Update user details
+    public function update(Request $request)
+    {
+        $validatedData = $request->validate([
             'name' => 'nullable|string|max:255',
-            'email' => 'nullable|string|email|max:255|unique:users,email,' . $id,
+            'email' => 'nullable|string|email|max:255|unique:users,email,' . auth()->id(),
             'password' => 'nullable|string|min:8',
-            'role' => 'nullable|in:user,admin',
         ]);
 
-        $updatedUser = $this->userRepository->update($user, $request->only(['name', 'email', 'password', 'role']));
+        $updatedUser = $this->userService->updateUser(auth()->id(), $validatedData);
 
-        return response()->json(['message' => 'User updated successfully', 'user' => $updatedUser]);
+        if (!$updatedUser) {
+            return response()->json(['error' => 'User not found or update failed'], 404);
+        }
+
+        return response()->json(['message' => 'User updated successfully', 'user' => $updatedUser], 200);
     }
 
-    public function delete($id)
+    // Delete user account
+    public function destroy()
     {
+        $deletedUser = $this->userService->deleteUser(auth()->id());
 
-        $authUser = auth()->user();
-        if (!$authUser) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+        if (!$deletedUser) {
+            return response()->json(['error' => 'User not found or deletion failed'], 404);
         }
 
-        $user = User::where('id', $id)->exists();
-
-        if (!$user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        if ($id != $authUser->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $this->userRepository->delete($id);
-
-        return response()->json(['message' => 'User deleted successfully']);
-
+        return response()->json(['message' => 'User deleted successfully'], 200);
     }
-
 }
