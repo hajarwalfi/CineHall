@@ -1,5 +1,4 @@
 <?php
-// database/migrations/xxxx_xx_xx_create_sieges_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +15,8 @@ return new class extends Migration
             $table->enum('type', ['Standard', 'VIP', 'Couple'])->default('Standard');
             $table->unsignedBigInteger('est_couple_avec')->nullable();
             $table->timestamps();
+
+            // Clé unique pour éviter les doublons
             $table->unique(['salle_id', 'rangee', 'numero']);
         });
     }

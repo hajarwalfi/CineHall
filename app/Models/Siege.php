@@ -1,5 +1,4 @@
 <?php
-// app/Models/Siege.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,6 +20,7 @@ class Siege extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    // Récupérer le siège associé (pour les sièges en couple)
     public function siegeCouple()
     {
         if ($this->est_couple_avec) {

@@ -1,5 +1,4 @@
 <?php
-// app/Services/SalleService.php
 namespace App\Services;
 
 use App\Repositories\Interfaces\SalleRepositoryInterface;

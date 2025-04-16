@@ -1,5 +1,4 @@
 <?php
-// app/Repositories/ReservationRepository.php
 namespace App\Repositories;
 
 use App\Models\Reservation;

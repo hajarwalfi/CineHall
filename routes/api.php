@@ -31,6 +31,22 @@ Route::middleware('auth:api')->group(function () {
 });
 
 
+
+// Routes pour les films
+Route::get('/films', [FilmController::class, 'index']);
+Route::get('/films/{id}', [FilmController::class, 'show']);
+Route::post('/films', [FilmController::class, 'store']);
+Route::put('/films/{id}', [FilmController::class, 'update']);
+Route::delete('/films/{id}', [FilmController::class, 'destroy']);
+
+// Routes pour les séances
+Route::get('/seances', [SeanceController::class, 'index']);
+Route::get('/seances/{id}', [SeanceController::class, 'show']);
+Route::post('/seances', [SeanceController::class, 'store']);
+Route::put('/seances/{id}', [SeanceController::class, 'update']);
+Route::delete('/seances/{id}', [SeanceController::class, 'destroy']);
+Route::get('/films/{filmId}/seances', [SeanceController::class, 'getByFilm']);
+
 // Routes pour les salles
 Route::get('/salles', [SalleController::class, 'index']);
 Route::get('/salles/vip', [SalleController::class, 'vipSalles']);
@@ -60,45 +76,3 @@ Route::get('/seances/{seanceId}/reservations', [ReservationController::class, 'g
 Route::get('/seances/{seanceId}/sieges-disponibles', [ReservationController::class, 'getSiegesDisponibles']);
 Route::get('/seances/{seanceId}/carte-sieges', [ReservationController::class, 'getCarteSieges']);
 Route::post('/reservations/annuler-expirees', [ReservationController::class, 'annulerExpirees']);
-
-
-
-
-
-
-Route::middleware('auth:api')->group(function () {
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::post('refresh', [AuthController::class, 'refresh']);
-    Route::get('me', [AuthController::class, 'me']);
-});
-
-// Routes pour les films
-Route::get('/films', [FilmController::class, 'index']);
-Route::get('/films/{id}', [FilmController::class, 'show']);
-Route::post('/films', [FilmController::class, 'store']);
-Route::put('/films/{id}', [FilmController::class, 'update']);
-Route::delete('/films/{id}', [FilmController::class, 'destroy']);
-
-// Routes pour les séances
-Route::get('/seances', [SeanceController::class, 'index']);
-Route::get('/seances/{id}', [SeanceController::class, 'show']);
-Route::post('/seances', [SeanceController::class, 'store']);
-Route::put('/seances/{id}', [SeanceController::class, 'update']);
-Route::delete('/seances/{id}', [SeanceController::class, 'destroy']);
-
-// Route pour récupérer les séances d'un film
-Route::get('/films/{filmId}/seances', [SeanceController::class, 'getByFilm']);
-
-
-Route::apiResource('salles', SalleController::class);
-Route::apiResource('sieges', SiegeController::class);
-Route::post('/reservations', [ReservationController::class, 'reserver']);
-
-Route::post('/reserver-siege', [SiegeController::class, 'reserver']);
-Route::get('reservations/expire', [ReservationController::class, 'checkAndExpireReservations']);
-
-
-Route::get('seances/{seance}/sieges-disponibles', [SiegeController::class, 'getSiegesDisponibles']);
-Route::put('user/{id}', [UserController::class, 'update']);
-Route::delete('user/{id}', [UserController::class, 'delete']);
-Route::get('/seances/film/{filmId}', [SeanceController::class, 'getByFilm']);

@@ -1,5 +1,4 @@
 <?php
-// app/Repositories/Interfaces/ReservationRepositoryInterface.php
 namespace App\Repositories\Interfaces;
 
 interface ReservationRepositoryInterface {

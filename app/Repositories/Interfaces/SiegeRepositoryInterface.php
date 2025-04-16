@@ -1,5 +1,4 @@
 <?php
-// app/Repositories/Interfaces/SiegeRepositoryInterface.php
 namespace App\Repositories\Interfaces;
 
 interface SiegeRepositoryInterface {
